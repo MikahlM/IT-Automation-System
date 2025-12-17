@@ -25,7 +25,7 @@ def check_CPU():
     # 2. Check against the rule (Threshold)
     # if the usage is over the set threshold then warning message is printed and logged
     if usage > CPU_Threshold:
-        print(f"WARNING HIGH CPU DETECTED: {usage}%")
+        print(f"[!] HIGH CPU DETECTED: {usage}%")
         logging.warning(f"HIGH CPU DETECTED: {usage}%")
         
         # 3. Start the Investigation (Find culprits)
@@ -64,12 +64,63 @@ def check_CPU():
 
 
 def check_disk():
-    pass
+    """
+    Checks disk usage. Returns True if space is CRITICALLY LOW.
+    """
+    # 1. Get the stats for the drive where the script is running
+    disk = psutil.disk_usage(SCRIPT_DIR)
+    
+    # 2. Math: Calculate the percentage of free space
+    free_percent = (disk.free / disk.total) * 100
+    
+    # 3. Decision Time
+    if free_percent < Disk_Threshold:
+        # BAD NEWS: Space is lower than our limit 
+        print(f"[!] LOW DISK SPACE: Only {free_percent:.1f}% Free")
+        logging.warning(f"LOW DISK SPACE: Only {free_percent:.1f}% Free")
+        return True  # This tells the Main Loop: "ACTIVATE AUTO-FIX!"
+        
+    else:
+        # GOOD NEWS: We have plenty of space
+        print(f"Disk is Healthy: {free_percent:.1f}% Free")
+        logging.info(f"Disk is Healthy: {free_percent:.1f}% Free")
+        return False # This tells the Main Loop: "Relax, do nothing."
 
 def auto_fix_disk():
-    pass
+    """
+    Simulates clearing disk space by deleting the dummy cache.
+    """
+    print("--> AUTO-FIX INITIATED: Clearing Temp Files...")
+    logging.info("Auto-Fix Started: Cleaning temp folder.")
+    
+    deleted_count = 0
+    
+    # 1. Check if our dummy folder actually exists
+    if os.path.exists(Temp_Folder):
+        
+        # 2. Loop through every file inside that folder
+        for filename in os.listdir(Temp_Folder):
+            file_path = os.path.join(Temp_Folder, filename)
+            
+            try:
+                # 3. Verify it's a file (not a folder) and DELETE it
+                if os.path.isfile(file_path):
+                    os.remove(file_path) 
+                    deleted_count += 1
+            except Exception as e:
+                # If a file is locked or in use, log the error but keep going
+                logging.error(f"Failed to delete {filename}: {e}")
 
-# --- SETUP LOGGING ---
+    # 4. Report the results
+    if deleted_count > 0:
+        print(f"--> Cleanup Complete. Removed {deleted_count} files.")
+        logging.info(f"Auto-Fix Successful. Removed {deleted_count} files.")
+    else:
+        print("--> No temp files found to clean.")
+        logging.info("Auto-Fix ran, but no files were found.")
+
+
+
 def setup_logging():
     """
     Configures the logging system to save events to a file.
@@ -88,13 +139,12 @@ def start_monitoring():
     # 1. Initialize Logging (Run this once at the start)
     setup_logging()
 
-    create_dummy_cache()  # <--- ADD THIS LINE HERE
+    create_dummy_cache()
     print(f"DEBUG: Dummy junk files created in {Temp_Folder}")
 
     # 2. The Infinite Loop (The "Heartbeat")
     try:
         while True:
-            # --- JOB 1: RUN THE CHECKS ---
             # This line jumps up to your check_CPU function, runs that code, 
             # and comes back here when it's done.
             check_CPU()
@@ -104,13 +154,14 @@ def start_monitoring():
 
             is_disk_low = check_disk()
 
-            # --- JOB 2: REACT TO PROBLEMS ---
+
             # We only react to Disk issues (Safety First!)
             if is_disk_low == True:
                 logging.warning("Disk Critical! Starting Auto-Fix...")
                 auto_fix_disk()
 
-            # --- JOB 3: THE PAUSE ---
+
+            logging.info("---Next Check in 5 seconds...---")
             # Wait 5 seconds (or whatever CHECK_DELAY is) before checking again.
             # Without this, your script would eat 100% of your CPU!
             time.sleep(Check_Delay)
