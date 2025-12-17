@@ -1,0 +1,8 @@
+# Ignore the log file (it changes too often)
+system.log
+
+# Ignore the junk folder
+dummy_cache/
+
+# Ignore Python system files
+__pycache__/
