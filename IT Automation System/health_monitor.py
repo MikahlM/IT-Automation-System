@@ -69,9 +69,6 @@ def check_disk():
 def auto_fix_disk():
     pass
 
-def auto_fix_cpu():
-    pass
-
 # --- SETUP LOGGING ---
 def setup_logging():
     """
@@ -90,6 +87,9 @@ def start_monitoring():
     
     # 1. Initialize Logging (Run this once at the start)
     setup_logging()
+
+    create_dummy_cache()  # <--- ADD THIS LINE HERE
+    print(f"DEBUG: Dummy junk files created in {Temp_Folder}")
 
     # 2. The Infinite Loop (The "Heartbeat")
     try:
@@ -119,6 +119,17 @@ def start_monitoring():
         # This handles the user pressing Ctrl+C cleanly
         print("\nStopping Monitor.")
         logging.info("Monitor stopped by user.")
+
+def create_dummy_cache():
+    # creates a folder to store dummy files
+    if not os.path.exists(Temp_Folder):
+        os.makedirs(Temp_Folder)
+
+    # Create 5 dummy text files
+    for i in range(5):
+        filename = os.path.join(Temp_Folder, f"temp_log_{i}.txt")
+        with open(filename, 'w') as f:
+            f.write("This is a junk file taking up space.")
 
 
 if __name__ == "__main__":
